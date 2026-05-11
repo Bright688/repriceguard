@@ -1,0 +1,46 @@
+@import "tailwindcss";
+
+:root {
+  --font-serif: 'Fraunces', Georgia, serif;
+}
+
+body {
+  background: #080b10;
+  color: #c9d6e8;
+  font-family: 'Courier New', monospace;
+  min-height: 100vh;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image: radial-gradient(circle, rgba(0,229,160,0.04) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+.font-serif { font-family: var(--font-serif); }
+
+@keyframes scanBar {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+
+@keyframes fadeUp {
+  from { opacity:0; transform: translateY(20px); }
+  to   { opacity:1; transform: translateY(0); }
+}
+
+.animate-fadeUp    { animation: fadeUp 0.5s ease both; }
+.animate-fadeUp-d1 { animation: fadeUp 0.5s ease 0.1s both; }
+.animate-fadeUp-d2 { animation: fadeUp 0.5s ease 0.2s both; }
+.animate-fadeUp-d3 { animation: fadeUp 0.5s ease 0.3s both; }
+.animate-fadeUp-d4 { animation: fadeUp 0.5s ease 0.4s both; }
+
+::-webkit-scrollbar { width:6px; height:6px; }
+::-webkit-scrollbar-track { background:#0d1117; }
+::-webkit-scrollbar-thumb { background:#1c2535; border-radius:3px; }
+
+::selection { background: rgba(0,229,160,0.2); }
