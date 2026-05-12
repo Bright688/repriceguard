@@ -4,6 +4,7 @@ import { useState, useRef } from 'react';
 import type { ScanResult } from '@/types';
 import { ScanPanel } from '@/components/ScanPanel';
 import { ScanResults } from '@/components/ScanResults';
+import { EXAMPLE_CONTRACTS } from '@/lib/examples';
 
 const EIP_PILLS = [
   { label: 'EIP-2780 · TX Base Gas', color: 'border-emerald-500/40 text-emerald-400 bg-emerald-500/[0.06]' },
@@ -28,15 +29,80 @@ const EIP_REF = [
   { id: 'EIP-7708', title: 'ETH Transfers Emit a Log', status: 'CFI', summary: 'Every non-zero ETH transfer emits a LOG3 event, adding TRANSFER_LOG_COST = 1,756 gas. Embedded in EIP-2780 accounting.' },
 ];
 
+const EXAMPLE_CARDS = [
+  {
+    key: 'forwarder',
+    title: 'ETH Forwarder Contract',
+    description: 'Forwards ETH to recipients using hardcoded 21,000 gas. Breaks under EIP-2780 when sending to new accounts (now costs 31,756).',
+    severity: 'critical',
+    icon: '⬤',
+  },
+  {
+    key: 'factory',
+    title: 'Factory / Clones Contract',
+    description: 'Deploys child contracts with capped gas budget. Fails post-EIP-8037 when state creation costs rise ~10×.',
+    severity: 'critical',
+    icon: '⬤',
+  },
+  {
+    key: 'multisig',
+    title: 'Multisig Wallet',
+    description: 'Uses .transfer() and fixed gas stipends for execution. EIP-2780 changes CALL_VALUE_COST from 9,000 → 3,756, affecting stipend math.',
+    severity: 'high',
+    icon: '◆',
+  },
+  {
+    key: 'defi',
+    title: 'DeFi Router / Aggregator',
+    description: 'Hardcoded gas limits for internal swaps and token transfers. Will over/under-estimate post-repricing.',
+    severity: 'high',
+    icon: '◆',
+  },
+  {
+    key: 'relayer',
+    title: 'Relayer / Meta-Tx',
+    description: 'Gas estimation logic based on TX_BASE_COST = 21,000 assumption. Needs update for new 4,500 base cost.',
+    severity: 'medium',
+    icon: '●',
+  },
+  {
+    key: 'clean',
+    title: 'Clean Contract (Baseline)',
+    description: 'A simple ERC-20 that uses no hardcoded gas values and no ETH-forwarding patterns. Shows a clean scan result.',
+    severity: 'info',
+    icon: '✓',
+  },
+];
+
 export default function Home() {
   const [result, setResult] = useState<ScanResult | null>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
+  const scanPanelRef = useRef<any>(null);
 
   const handleResult = (r: ScanResult) => {
     setResult(r);
     setTimeout(() => {
       resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 80);
+  };
+
+  const scanExample = async (exampleKey: string) => {
+    const example = EXAMPLE_CONTRACTS[exampleKey];
+    if (!example) return;
+
+    try {
+      const res = await fetch('/api/scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: 'source', input: example.source }),
+      });
+      
+      if (!res.ok) throw new Error(await res.text());
+      const scanResult: ScanResult = await res.json();
+      handleResult(scanResult);
+    } catch (error) {
+      console.error('Scan failed:', error);
+    }
   };
 
   return (
@@ -97,6 +163,88 @@ export default function Home() {
       <div className="animate-fadeUp-d4 max-w-6xl mx-auto px-8 mb-16">
         <ScanPanel onResult={handleResult} />
       </div>
+
+      {/* ── EXAMPLE CONTRACTS ── */}
+      <section className="max-w-6xl mx-auto px-8 mb-20">
+        <div className="flex items-center gap-3 mb-6">
+          <span className="w-5 h-px bg-emerald-400" />
+          <span className="text-sm font-mono tracking-[0.2em] uppercase text-[#8a9fb5]">Example Contracts</span>
+          <div className="flex-1 h-px bg-[#1c2535]" />
+        </div>
+        <h2 className="font-serif text-4xl font-bold text-[#c9d6e8] mb-3 tracking-tight">
+          Try these known-vulnerable patterns
+        </h2>
+        <p className="text-base text-[#a0b3c5] mb-8 max-w-3xl">
+          Click any example below to automatically scan it and see RepriceGuard's vulnerability detection in action.
+        </p>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {EXAMPLE_CARDS.map((card) => {
+            const getSeverityStyle = (severity: string) => {
+              switch (severity) {
+                case 'critical':
+                  return {
+                    bg: 'bg-red-500/[0.04] hover:bg-red-500/[0.08]',
+                    border: 'border-red-500/30',
+                    text: 'text-red-400',
+                    badge: 'bg-red-500/10 border-red-500/40',
+                    label: 'Critical Severity'
+                  };
+                case 'high':
+                  return {
+                    bg: 'bg-amber-500/[0.04] hover:bg-amber-500/[0.08]',
+                    border: 'border-amber-500/30',
+                    text: 'text-amber-400',
+                    badge: 'bg-amber-500/10 border-amber-500/40',
+                    label: 'High Severity'
+                  };
+                case 'medium':
+                  return {
+                    bg: 'bg-blue-500/[0.04] hover:bg-blue-500/[0.08]',
+                    border: 'border-blue-500/30',
+                    text: 'text-blue-400',
+                    badge: 'bg-blue-500/10 border-blue-500/40',
+                    label: 'Medium Severity'
+                  };
+                default:
+                  return {
+                    bg: 'bg-emerald-500/[0.04] hover:bg-emerald-500/[0.08]',
+                    border: 'border-emerald-500/30',
+                    text: 'text-emerald-400',
+                    badge: 'bg-emerald-500/10 border-emerald-500/40',
+                    label: 'No Vulnerabilities'
+                  };
+              }
+            };
+            
+            const style = getSeverityStyle(card.severity);
+            
+            return (
+              <button
+                key={card.key}
+                onClick={() => scanExample(card.key)}
+                className={`group text-left p-5 rounded-xl border ${style.border} ${style.bg} transition-all hover:-translate-y-1 hover:shadow-lg`}
+              >
+                <div className="flex items-start gap-3 mb-3">
+                  <span className={`text-lg ${style.text}`}>{card.icon}</span>
+                  <span className={`text-xs font-mono tracking-widest uppercase px-2 py-1 rounded border ${style.badge} ${style.text}`}>
+                    {style.label}
+                  </span>
+                </div>
+                <h3 className="font-mono text-base font-semibold text-[#c9d6e8] mb-2 leading-snug">
+                  {card.title}
+                </h3>
+                <p className="text-sm text-[#a0b3c5] leading-relaxed mb-4">
+                  {card.description}
+                </p>
+                <div className={`inline-flex items-center gap-2 text-sm font-mono font-semibold tracking-wide uppercase ${style.text} group-hover:gap-3 transition-all`}>
+                  Scan this →
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </section>
 
       {/* ── RESULTS ── */}
       {result && (
