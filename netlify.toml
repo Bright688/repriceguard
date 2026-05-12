@@ -1,6 +1,6 @@
 [build]
   base    = "repriceguard"
-  command = "npm run build"
+  command = "npm install --include=dev && npm run build"
   publish = ".next"
 
 [[plugins]]
